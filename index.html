@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Quiz Matemática Neon Azul</title>
+  <style>
+
+    body, html {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      font-family: 'Arial bold', sans-serif;
+      font-size: 20px;
+      color: white ;
+      overflow: auto; /* agora permite rolagem */
+    }
+
+    canvas#bgCanvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: -1;
+      background: #000;
+    }
+
+    .container, .quiz-container {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      text-align: center;
+    }
+
+    h1 {
+      font-size: 3rem;
+      text-shadow: 0 0 10px #0f0 , 0 0 20px #0f0 ;
+    }
+
+    h2 {
+      font-size: 1.2rem;
+      margin-bottom: 20px;
+      text-shadow: 0 0 10px #0f0 ;
+    }
+
+    .collaborators {
+      margin: 20px 0;
+    }
+
+    button {
+      background: #0f0;
+      border: none;
+      padding: 10px 30px;
+      font-size: 1.2rem;
+      border-radius: 8px;
+      cursor: pointer;
+      color: #000;
+      transition: 0.3s;
+    }
+
+    button:hover {
+      box-shadow: 0 0 15px #0f0, 0 0 30px #0f0;
+    }
+
+    .quiz-container {
+      display: none;
+      padding: 20px;
+    }
+
+    .question {
+      font-size: 1.5rem;
+      margin-bottom: 20px;
+      text-shadow: 0 0 10px #0f0;
+    }
+
+    .question img {
+      margin: 15px auto;
+      display: block;
+      border: 2px solid #0f0;
+      border-radius: 10px;
+      box-shadow: 0 0 15px #0f0;
+    }
+
+    .options button {
+      display: block;
+      margin: 10px auto;
+      padding: 10px 20px;
+      background: transparent;
+      border: 2px solid #0f0;
+      border-radius: 8px;
+      font-size: 1rem;
+      color: white;
+      cursor: pointer;
+      transition: 0.3s;
+      width: 250px;
+    }
+
+    .options button:hover {
+      background: #0ff2;
+    }
+
+    .correct {
+      background: #0f0 !important;
+      color: white !important;
+      border-color: #0f0 !important;
+    }
+
+    .wrong {
+      background: #f00 !important;
+      color: #fff !important;
+      border-color: #f00 !important;
+    }
+
+    .nav-buttons {
+      margin-top: 20px;
+    }
+
+    .nav-buttons button {
+      margin: 0 10px;
+      border: 2px solid #0f0;
+      background: transparent;
+      color: #0f0;
+    }
+
+    /* Responsividade para tablets */
+    @media (max-width: 1024px) {
+      h1 {
+        font-size: 2.5rem;
+      }
+      h2 {
+        font-size: 1rem;
+      }
+      .question {
+        font-size: 1.3rem;
+      }
+      .options button {
+        width: 220px;
+        font-size: 0.95rem;
+      }
+    }
+
+    /* Responsividade para celulares */
+    @media (max-width: 600px) {
+      body, html {
+        font-size: 16px;
+      }
+
+      h1 {
+        font-size: 2rem;
+      }
+
+      h2 {
+        font-size: 0.9rem;
+      }
+
+      .question {
+        font-size: 1.1rem;
+      }
+
+      .question img {
+        max-width: 90% !important;
+      }
+
+      .options button {
+        width: 90%;
+        font-size: 0.9rem;
+        padding: 8px 15px;
+      }
+
+      .nav-buttons {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .nav-buttons button {
+        width: 90%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <canvas id="bgCanvas"></canvas>
+
+  <!-- Página inicial -->
+  <div class="container" id="start-page">
+    <h1 style="color: #0f0;">Quiz Matemática</h1>
+    <h2>Projeto de perguntas (PIBID - Matemática)</h2>
+    <div class="collaborators">
+      <p>Joaquim Angelo</p>
+      <p>Mikaele Oliveira</p>
+      <p>Jose Ribamar</p>
+      <p>Danilo</p>
+      <p>Lynconl Nascimento</p>
+    </div>
+    <button onclick="startQuiz()">Entrar</button>
+  </div>
+
+  <!-- Quiz -->
+  <div class="quiz-container" id="quiz">
+    <div class="question" id="question"></div>
+    <div id="image-container"></div>
+    <div class="options" id="options"></div>
+    <div class="nav-buttons">
+      <button onclick="prevQuestion()">Anterior</button>
+      <button onclick="nextQuestion()">Próxima</button>
+    </div>
+  </div>
+
+  <script>
+    // Fundo interativo com fórmulas flutuando
+    const canvas = document.getElementById("bgCanvas");
+    const ctx = canvas.getContext("2d");
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    const formulas = ["A=b.h", "a²+b²=c²", "πr²", "∫x dx", "x²+y²", "v=a.b.c", "cos60°", "sen45°", "2πr", "√x"];
+    const particles = [];
+
+    class Particle {
+      constructor(x, y, text) {
+        this.x = x;
+        this.y = y;
+        this.text = text;
+        this.speed = 1 + Math.random() * 2;
+        this.size = 18 + Math.random() * 10;
+      }
+      draw() {
+        ctx.fillStyle = " #0f0";
+        ctx.font = this.size + "px Arial";
+        ctx.fillText(this.text, this.x, this.y);
+      }
+      update() {
+        this.y += this.speed;
+        if (this.y > canvas.height) {
+          this.y = -20;
+          this.x = Math.random() * canvas.width;
+        }
+        this.draw();
+      }
+    }
+
+    function initParticles() {
+      for (let i = 0; i < 50; i++) {
+        let x = Math.random() * canvas.width;
+        let y = Math.random() * canvas.height;
+        let text = formulas[Math.floor(Math.random() * formulas.length)];
+        particles.push(new Particle(x, y, text));
+      }
+    }
+
+    function animate() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      particles.forEach(p => p.update());
+      requestAnimationFrame(animate);
+    }
+
+    initParticles();
+    animate();
+
+    // Quiz
+    const questions = [
+      {
+        text: "Qual o valor de x na figura abaixo?",
+        image: "triangulo.webp",
+        imgWidth: "300px", // aqui você controla o tamanho da imagem
+        options: ["6","10", "12","100"],
+        correct: 1
+      },
+       {
+        text: "Qual o voluma do prisma abaixo?",
+        image: "prisma.jpg",
+        imgWidth: "300px", // aqui você controla o tamanho da imagem
+        options: ["20","22","32", "320"],
+        correct: 3
+      },
+             {
+        text: "Analisando o gráfico abaixo responda quantas pessoas precisaram usar óculos por causa da vista embaçada?",
+        image: "grafico.png",
+        imgWidth: "400px", // aqui você controla o tamanho da imagem
+        options: ["32","26","29", "19"],
+        correct: 0
+      },
+      {
+        text: "Quantas combinações diferentes de roupa uma pessoas pode vestir tendo, 6 camisas e 4 calças?",
+        options: ["10","60","24", "48"],
+        correct: 2
+      },
+      {
+        text: "Juliana possui 3 sandálias marrons, 5 sandálias pretas, 4 bolsas marrons, 2 bolsas brancas. Ela está usando um acessório marrom, qual a probabilidade que seja uma sandália?",
+        options: ["1/14", "3/14", "6/14", "3/7"],
+        correct: 3
+      },
+      {
+        text: "Quais as cordenadas do ponto P no plano cartesiano abaixo?",
+        image: "cartesiano.png",
+        imgWidth: "400px", 
+        options: ["(17,5; 350).", "(300; 15)", "(350; 17,5)", "(400; 20)"],
+        correct: 2
+      },
+      {
+        text: "Maurício aplicou R$ 500,00 a juros simples durante 12 meses, à taxa de 2% ao mês. Qual o valor do montante ao final desse período?", 
+        options: ["500", "620", "900", "1500"],
+        correct: 1
+      }
+    ];
+
+    let currentQuestion = 0;
+
+    function startQuiz() {
+      document.getElementById("start-page").style.display = "none";
+      document.getElementById("quiz").style.display = "flex";
+      loadQuestion();
+    }
+
+    function loadQuestion() {
+      const q = questions[currentQuestion];
+      document.getElementById("question").textContent = q.text;
+
+      const imgContainer = document.getElementById("image-container");
+      imgContainer.innerHTML = q.image ? `<img src="${q.image}" style="max-width:${q.imgWidth};" alt="Imagem da questão">` : "";
+
+      const optionsDiv = document.getElementById("options");
+      optionsDiv.innerHTML = "";
+      q.options.forEach((opt, i) => {
+        const btn = document.createElement("button");
+        btn.textContent = opt;
+        btn.onclick = () => checkAnswer(i, btn);
+        optionsDiv.appendChild(btn);
+      });
+    }
+
+    function checkAnswer(selected, btn) {
+      const q = questions[currentQuestion];
+      const options = document.querySelectorAll(".options button");
+      options.forEach((b, i) => {
+        b.disabled = true;
+        if (i === q.correct) b.classList.add("correct");
+        if (i === selected && selected !== q.correct) b.classList.add("wrong");
+      });
+    }
+
+    function nextQuestion() {
+      if (currentQuestion < questions.length - 1) {
+        currentQuestion++;
+        loadQuestion();
+      }
+    }
+
+    function prevQuestion() {
+      if (currentQuestion > 0) {
+        currentQuestion--;
+        loadQuestion();
+      }
+    }
+
+    window.addEventListener("resize", () => {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    });
+  </script>
+</body>
+</html>
+
+
+
